@@ -1,10 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net.Http;
+using System.Collections.Immutable;
+using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Readers;
+using NuGet.Frameworks;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,9 +21,18 @@ public class YardarmGeneratorTests
         _outputHelper = outputHelper;
 
 
+    private static YardarmGenerationSettings GetSettings() => JsonSerializer.Deserialize<YardarmGenerationSettings>("{\"InputFile\":\"C:\\\\repos\\\\frankhaugen\\\\Yardarm\\\\src\\\\main\\\\output\\\\TestJson\\\\swagger.json\",\"Version\":\"1.0.0\",\"KeyFile\":null,\"KeyContainerName\":null,\"PublicSign\":false,\"EmbedAllSources\":false,\"NoRestore\":false,\"References\":[],\"OutputFile\":\"C:\\\\repos\\\\frankhaugen\\\\Yardarm\\\\src\\\\main\\\\output\\\\TestJson\\\\generated\\\\TestJson.dll\",\"OutputXmlFile\":null,\"NoXmlFile\":false,\"OutputDebugSymbols\":null,\"NoDebugSymbols\":false,\"OutputReferenceAssembly\":null,\"NoReferenceAssembly\":false,\"DelaySign\":false,\"OutputPackageFile\":null,\"OutputSymbolsPackageFile\":null,\"NoSymbolsPackageFile\":false,\"RepositoryType\":\"git\",\"RepositoryUrl\":null,\"RepositoryBranch\":null,\"RepositoryCommit\":null,\"AssemblyName\":\"TestJson\",\"RootNamespace\":null,\"TargetFrameworks\":[],\"ExtensionFiles\":[],\"IntermediateOutputPath\":\"C:\\\\repos\\\\frankhaugen\\\\Yardarm\\\\src\\\\main\\\\output\\\\TestJson\\\\intermediate\"}");
+
+    private static DirectoryInfo GetBaseDirectory(string assemblyName)
+    {
+        DirectoryInfo baseDirectoryInfo = new DirectoryInfo(Environment.CurrentDirectory).Parent.Parent.Parent.Parent.CreateSubdirectory("output").CreateSubdirectory(assemblyName);
+        baseDirectoryInfo.Create();
+        return baseDirectoryInfo;
+    }
+
     private OpenApiDocument GetDocument(string url)
     {
-        var document = DocumentHelper.CreateDocument(new Uri(url), out var diagnostic);
+        OpenApiDocument document = DocumentHelper.DownloadDocument(new Uri(url), out OpenApiDiagnostic diagnostic);
 
         if (diagnostic.Errors.Count > 0)
         {
@@ -33,34 +45,34 @@ public class YardarmGeneratorTests
     [Fact]
     public async Task Generate()
     {
-        var document = GetDocument("https://petstore.swagger.io/v2/swagger.json");
-        var generator = new YardarmGenerator(document, new YardarmGenerationSettings
+        string assemblyName = "TestJson";
+        DirectoryInfo basePath = GetBaseDirectory(assemblyName);
+        DirectoryInfo intermediatePath = basePath.CreateSubdirectory("intermediate");
+        intermediatePath.Create();
+
+        YardarmGenerationSettings yardarmGenerationSettings = new()
         {
-            RootNamespace = "Test",
-        });
+            AssemblyName = assemblyName,
+            Version = new Version(1, 0),
+            Author = "anonymous",
+            BasePath = basePath.FullName,
+            // DllOutput = new MemoryStream(),
+            // PdbOutput = new MemoryStream(),
+            XmlDocumentationOutput = new MemoryStream(),
+            IntermediateOutputPath = intermediatePath.FullName,
+            TargetFrameworkMonikers = new[] { "net6.0" }.ToImmutableArray(),
+            CompilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+        };
+        YardarmGenerationSettings settings = yardarmGenerationSettings;
 
-        var result = await generator.EmitAsync();
+        settings.RootNamespace = "TestJson";
 
-        _outputHelper.WriteLine(result);
-    }
-}
+        YardarmGenerator generator = new(GetDocument(@"C:\repos\Yardarm\src\main\Yardarm.CommandLine\centeredge-cardsystemapi.json"), settings);
+        // await generator.RestoreAsync();
+        CSharpCompilation result = await generator.BuildCSharpForTargetFrameworkAsync(new NuGetFramework("net6.0"));
 
+        _outputHelper.WriteLine(result.ToString());
 
-public static class TestOutputHelperExtensions
-{
-    public static void WriteLine<T>(this ITestOutputHelper outputHelper, T value)
-    {
-        outputHelper.WriteLine(JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }));
-    }
-}
-
-public static class DocumentHelper
-{
-    public static OpenApiDocument CreateDocument(Uri uri, out OpenApiDiagnostic diagnostic)
-    {
-        var reader = new Microsoft.OpenApi.Readers.OpenApiStreamReader();
-        var swagger = new HttpClient().GetStreamAsync(uri).GetAwaiter().GetResult();
-        var document = reader.Read(swagger, out diagnostic);
-        return document;
+        intermediatePath.Delete(true);
     }
 }

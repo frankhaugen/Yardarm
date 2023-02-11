@@ -1,7 +1,8 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using Xunit.Abstractions;
 
-namespace Yardarm.CommandLine.IntegrationTests;
+namespace Yardarm.UnitTests;
 
 public static class TestOutputHelperExtensions
 {

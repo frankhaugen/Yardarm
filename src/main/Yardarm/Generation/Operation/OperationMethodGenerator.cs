@@ -114,13 +114,12 @@ namespace Yardarm.Generation.Operation
                             Argument(IdentifierName("responseMessage")),
                             Argument(IdentifierName(TagImplementationTypeGenerator.TypeSerializerRegistryFieldName)))));
 
-        [Pure]
-        private static ExpressionSyntax ParseStatusCode(string statusCodeStr) =>
-            // The HttpStatusCode enum available in .NET Core 3.1 used by Yardarm has more values in it than .NET Standard 2.0
-            // for the compiled SDK, so if the spec has any new status codes (i.e. 207) it will cause compilation errors.
-            // Instead cast the numeric value.
-            CastExpression(
-                WellKnownTypes.System.Net.HttpStatusCode.Name,
-                LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(int.Parse(statusCodeStr))));
-    }
+    [Pure]
+    private static ExpressionSyntax ParseStatusCode(string statusCodeStr) =>
+        // The HttpStatusCode enum available in .NET Core 3.1 used by Yardarm has more values in it than .NET Standard 2.0
+        // for the compiled SDK, so if the spec has any new status codes (i.e. 207) it will cause compilation errors.
+        // Instead cast the numeric value.
+        CastExpression(
+            WellKnownTypes.System.Net.HttpStatusCode.Name,
+            LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(int.TryParse(statusCodeStr, out int result) ? result : 200)));
 }

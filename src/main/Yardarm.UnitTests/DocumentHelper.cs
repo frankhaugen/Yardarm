@@ -1,7 +1,10 @@
-﻿using Microsoft.OpenApi.Models;
+﻿using System;
+using System.IO;
+using System.Net.Http;
+using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Readers;
 
-namespace Yardarm.CommandLine.IntegrationTests;
+namespace Yardarm.UnitTests;
 
 public static class DocumentHelper
 {

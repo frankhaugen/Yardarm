@@ -34,62 +34,58 @@ namespace Yardarm.Generation.Response
                 yield break;
             }
 
-            if (!response.IsRoot())
-            {
-                // Construct from status code and headers without body
-                yield return ConstructorDeclaration(
-                    default,
-                    new SyntaxTokenList(Token(SyntaxKind.PublicKeyword)),
-                    Identifier(className),
-                    ParameterList(SingletonSeparatedList(
-                        Parameter(
-                            default,
-                            default,
-                            NullableType(WellKnownTypes.System.Net.Http.Headers.HttpResponseHeaders.Name),
-                            Identifier("headers"),
-                            EqualsValueClause(LiteralExpression(SyntaxKind.NullLiteralExpression))))),
-                    ConstructorInitializer(SyntaxKind.BaseConstructorInitializer,
-                        ArgumentList(SeparatedList(new[]
-                        {
-                            Argument(CastExpression(
-                                WellKnownTypes.System.Net.HttpStatusCode.Name,
-                                LiteralExpression(SyntaxKind.NumericLiteralExpression,
-                                    Literal(response.Key, int.Parse(response.Key))))),
-                            Argument(IdentifierName("headers"))
-                        }))),
-                    Block());
-            }
-            else
-            {
-                // Construct from passed status code and headers without body, inherited types will supply the status code
-                yield return ConstructorDeclaration(
-                    default,
-                    new SyntaxTokenList(Token(SyntaxKind.ProtectedKeyword)),
-                    Identifier(className),
-                    ParameterList(SeparatedList(new []
+        if (!response.IsRoot())
+        {
+            // Construct from status code and headers without body
+            yield return ConstructorDeclaration(
+                default,
+                new SyntaxTokenList(Token(SyntaxKind.PublicKeyword)),
+                Identifier(className),
+                ParameterList(SingletonSeparatedList(
+                    Parameter(
+                        default,
+                        default,
+                        NullableType(WellKnownTypes.System.Net.Http.Headers.HttpResponseHeaders.Name),
+                        Identifier("headers"),
+                        EqualsValueClause(LiteralExpression(SyntaxKind.NullLiteralExpression))))),
+                ConstructorInitializer(SyntaxKind.BaseConstructorInitializer,
+                    ArgumentList(SeparatedList(new[]
                     {
-                        Parameter(
-                            default,
-                            default,
+                        Argument(CastExpression(
                             WellKnownTypes.System.Net.HttpStatusCode.Name,
-                            Identifier("statusCode"),
-                            null),
-                        Parameter(
-                            default,
-                            default,
-                            NullableType(WellKnownTypes.System.Net.Http.Headers.HttpResponseHeaders.Name),
-                            Identifier("headers"),
-                            EqualsValueClause(LiteralExpression(SyntaxKind.NullLiteralExpression)))
-                    })),
-                    ConstructorInitializer(SyntaxKind.BaseConstructorInitializer,
-                        ArgumentList(SeparatedList(new[]
-                        {
-                            Argument(IdentifierName("statusCode")),
-                            Argument(IdentifierName("headers"))
-                        }))),
-                    Block());
-            }
+                            LiteralExpression(SyntaxKind.NumericLiteralExpression,
+                                Literal(response.Key, int.TryParse(response.Key, out int result) ? result : 200)))),
+                        Argument(IdentifierName("headers"))
+                    }))),
+                Block());
         }
+        else
+        {
+            // Construct from passed status code and headers without body, inherited types will supply the status code
+            yield return ConstructorDeclaration(
+                default,
+                new SyntaxTokenList(Token(SyntaxKind.ProtectedKeyword)),
+                Identifier(className),
+                ParameterList(SeparatedList(new[]
+                {
+                    Parameter(
+                        default,
+                        default,
+                        WellKnownTypes.System.Net.HttpStatusCode.Name,
+                        Identifier("statusCode"),
+                        null),
+                    Parameter(
+                        default,
+                        default,
+                        NullableType(WellKnownTypes.System.Net.Http.Headers.HttpResponseHeaders.Name),
+                        Identifier("headers"),
+                        EqualsValueClause(LiteralExpression(SyntaxKind.NullLiteralExpression)))
+                })),
+                ConstructorInitializer(SyntaxKind.BaseConstructorInitializer,
+                    ArgumentList(SeparatedList(new[] { Argument(IdentifierName("statusCode")), Argument(IdentifierName("headers")) }))),
+                Block());
+        }
+    }
 
         private TypeSyntax? GetBodyType(ILocatedOpenApiElement<OpenApiResponse> response)
         {
