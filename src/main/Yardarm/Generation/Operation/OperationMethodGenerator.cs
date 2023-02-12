@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
-using System.Net;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.OpenApi.Models;
@@ -94,32 +93,35 @@ namespace Yardarm.Generation.Operation
         protected virtual ExpressionSyntax GenerateResponse(
             ILocatedOpenApiElement<OpenApiOperation> operation, ExpressionSyntax responseMessage) =>
             SwitchExpression(
-                MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
-                    responseMessage,
-                    IdentifierName("StatusCode")),
-                SeparatedList(operation
-                    .GetResponseSet()
-                    .GetResponses()
-                    .Select(p => SwitchExpressionArm(
-                        ConstantPattern(ParseStatusCode(p.Key)),
-                        ObjectCreationExpression(
-                                Context.TypeGeneratorRegistry.Get(p).TypeInfo.Name)
-                            .AddArgumentListArguments(
-                                Argument(IdentifierName("responseMessage")),
-                                Argument(IdentifierName(TagImplementationTypeGenerator.TypeSerializerRegistryFieldName)))))))
+                    MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                        responseMessage,
+                        IdentifierName("StatusCode")),
+                    SeparatedList(operation
+                        .GetResponseSet()
+                        .GetResponses()
+                        .Select(p => SwitchExpressionArm(
+                            ConstantPattern(ParseStatusCode(p.Key)),
+                            ObjectCreationExpression(
+                                    Context.TypeGeneratorRegistry.Get(p).TypeInfo.Name)
+                                .AddArgumentListArguments(
+                                    Argument(IdentifierName("responseMessage")),
+                                    Argument(IdentifierName(TagImplementationTypeGenerator.TypeSerializerRegistryFieldName)))))))
                 .AddArms(SwitchExpressionArm(DiscardPattern(),
                     ObjectCreationExpression(
-                        Context.TypeGeneratorRegistry.Get(operation.GetResponseSet().GetUnknownResponse()).TypeInfo.Name)
+                            Context.TypeGeneratorRegistry.Get(operation.GetResponseSet().GetUnknownResponse()).TypeInfo.Name)
                         .AddArgumentListArguments(
                             Argument(IdentifierName("responseMessage")),
                             Argument(IdentifierName(TagImplementationTypeGenerator.TypeSerializerRegistryFieldName)))));
 
-    [Pure]
-    private static ExpressionSyntax ParseStatusCode(string statusCodeStr) =>
-        // The HttpStatusCode enum available in .NET Core 3.1 used by Yardarm has more values in it than .NET Standard 2.0
-        // for the compiled SDK, so if the spec has any new status codes (i.e. 207) it will cause compilation errors.
-        // Instead cast the numeric value.
-        CastExpression(
-            WellKnownTypes.System.Net.HttpStatusCode.Name,
-            LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(int.TryParse(statusCodeStr, out int result) ? result : 200)));
+        [Pure]
+        private static ExpressionSyntax ParseStatusCode(string statusCodeStr)
+        {
+            // The HttpStatusCode enum available in .NET Core 3.1 used by Yardarm has more values in it than .NET Standard 2.0
+            // for the compiled SDK, so if the spec has any new status codes (i.e. 207) it will cause compilation errors.
+            // Instead cast the numeric value.
+            return CastExpression(
+                WellKnownTypes.System.Net.HttpStatusCode.Name,
+                LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(int.TryParse(statusCodeStr, out int result) ? result : 200)));
+        }
+    }
 }

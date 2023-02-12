@@ -1,24 +1,21 @@
 ﻿using System;
 using System.Collections.Immutable;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace Yardarm.UnitTests;
 
-public class YardarmGeneratorTests : IDisposable
+public class YardarmTestingApplication
 {
     private readonly ITestOutputHelper _outputHelper;
     private readonly TestContext _context;
 
-    public YardarmGeneratorTests(ITestOutputHelper outputHelper)
+    public YardarmTestingApplication(ITestOutputHelper outputHelper)
     {
         _outputHelper = outputHelper;
-        _context = GetContext(nameof(YardarmGeneratorTests));
+        _context = GetContext(nameof(YardarmTestingApplication));
     }
 
     private static TestContext GetContext(string assemblyName)
@@ -54,27 +51,6 @@ public class YardarmGeneratorTests : IDisposable
         return yardarmGenerationSettings;
     }
 
-
-    [Fact]
-    public async Task Generate()
-    {
-        var generator = new YardarmSyntaGenerator(DocumentHelper.DownloadDocument(new Uri(@"C:\temp\swagger.semine.json"), _outputHelper), GetSettings(_context));
-        CSharpCompilation result = await generator.CompileAsync();
-
-        var codeGroups = result.SyntaxTrees.GroupBy(x => x.FilePath);
-
-        foreach (var group in codeGroups)
-        {
-            var filePath = Path.Combine(_context.BasePath.FullName, group.Key);
-            var directory = Path.GetDirectoryName(filePath);
-            Directory.CreateDirectory(directory);
-            var code = string.Join(Environment.NewLine, group.Select(t => t.ToString()));
-            _outputHelper.WriteLine(group.Key);
-            _outputHelper.WriteLine(code);
-
-            File.WriteAllText(filePath, code);
-        }
-    }
 
     private record TestContext(string AssemblyName, DirectoryInfo BasePath, DirectoryInfo IntermediatePath);
 
